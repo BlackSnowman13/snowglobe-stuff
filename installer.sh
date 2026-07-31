@@ -7,7 +7,7 @@ set -euo pipefail
 # ==========================================================
 
 # CHANGE THIS TO YOUR RAW GITHUB LINK
-INSTALLER_URL="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/install.py"
+INSTALLER_URL="https://raw.githubusercontent.com/BlackSnowman13/snowglobe-stuff/refs/heads/main/install.py"
 
 echo
 echo "==========================================="
