@@ -238,6 +238,18 @@ def print_info(msg: str) -> None:
     """Print an informational message."""
     print(f"  [•] {msg}")
 
+def configure_windows_console() -> None:
+    """Configure UTF-8 encoding and ANSI terminal support for Windows console."""
+    if platform.system() == "Windows":
+        try:
+            os.system("")  # Enable VT100 / ANSI escape sequences in Windows Command Prompt
+            if hasattr(sys.stdout, "reconfigure"):
+                sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            if hasattr(sys.stderr, "reconfigure"):
+                sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
 def ensure_tty_stdin() -> None:
     """Redirect file descriptor 0 (stdin) to the controlling terminal if input is piped (e.g., via curl ... | bash)."""
     if not sys.stdin.isatty():
@@ -393,6 +405,7 @@ def disable_unknown_mods(mods_folder: Path, known_filenames: Set[str]) -> int:
 # ==============================================================================
 
 def main() -> None:
+    configure_windows_console()
     ensure_tty_stdin()
     print_header("Minecraft Modpack Installer")
 
