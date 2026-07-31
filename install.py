@@ -255,45 +255,28 @@ def ask_yes_no(question: str, default: bool = True) -> bool:
             print("\nOperation cancelled.")
             sys.exit(1)
 
-def find_minecraft_folder() -> Path:
-    """
-    Locate the .minecraft folder using the following priority:
-    1. Local directory beside install.py (./.minecraft)
-    2. Default OS directory (%APPDATA%/.minecraft, ~/.minecraft, ~/Library/Application Support/minecraft)
-    3. User interactive prompt fallback
-    """
-    script_dir = Path(__file__).resolve().parent
-    local_mc = script_dir / ".minecraft"
-    if local_mc.is_dir():
-        print_success(f"Found local .minecraft at: {local_mc}")
-        return local_mc
-
-    system = platform.system()
-    default_path: Optional[Path] = None
-
-    if system == "Windows":
-        appdata = os.getenv("APPDATA")
-        if appdata:
-            default_path = Path(appdata) / ".minecraft"
-    elif system == "Linux":
-        default_path = Path.home() / ".minecraft"
-    elif system == "Darwin":
-        default_path = Path.home() / "Library" / "Application Support" / "minecraft"
-
-    if default_path and default_path.is_dir():
-        print_success(f"Found .minecraft at default path: {default_path}")
-        return default_path
-
-    # Fallback to interactive prompt
-    print_error("Could not automatically locate the .minecraft directory.")
+def get_target_folder() -> Path:
+    """Prompt the user for the target download folder path and create it if necessary."""
     while True:
         try:
-            path_str = input("Please enter the path to your .minecraft folder: ").strip()
+            path_str = input("Please enter the path to the folder to download the mods into: ").strip()
             if path_str:
-                custom_path = Path(path_str).expanduser().resolve()
-                if custom_path.is_dir():
-                    return custom_path
-                print_error(f"The path '{custom_path}' does not exist or is not a directory.")
+                target_path = Path(path_str).expanduser().resolve()
+                if not target_path.exists():
+                    try:
+                        target_path.mkdir(parents=True, exist_ok=True)
+                        print_success(f"Created target directory: {target_path}")
+                    except Exception as err:
+                        print_error(f"Could not create directory '{target_path}': {err}")
+                        continue
+                elif not target_path.is_dir():
+                    print_error(f"The path '{target_path}' exists but is not a directory.")
+                    continue
+
+                print_success(f"Target folder set to: {target_path}")
+                return target_path
+            else:
+                print("Path cannot be empty. Please try again.")
         except (KeyboardInterrupt, EOFError):
             print("\nOperation cancelled.")
             sys.exit(1)
@@ -339,28 +322,6 @@ def verify_download(filepath: Path) -> bool:
     if filepath.exists() and filepath.stat().st_size > 0:
         return True
     return False
-
-def create_backup(mods_folder: Path, backup_folder: Path, backup_name: str) -> Optional[Path]:
-    """Create a zip backup of all files in the mods folder."""
-    backup_folder.mkdir(parents=True, exist_ok=True)
-    clean_name = backup_name.strip()
-    if not clean_name.endswith(".zip"):
-        clean_name += ".zip"
-
-    backup_path = backup_folder / clean_name
-    print_info(f"Creating backup at: {backup_path.name}")
-
-    try:
-        with zipfile.ZipFile(backup_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for item in mods_folder.rglob("*"):
-                if item.is_file():
-                    arcname = item.relative_to(mods_folder)
-                    zip_file.write(item, arcname)
-        print_success(f"Backup created successfully: {backup_path}")
-        return backup_path
-    except Exception as err:
-        print_error(f"Failed to create backup: {err}")
-        return None
 
 def get_installed_mods(mods_folder: Path) -> Set[str]:
     """Get filenames of all currently installed mods in the mods folder."""
@@ -422,27 +383,8 @@ def disable_unknown_mods(mods_folder: Path, known_filenames: Set[str]) -> int:
 def main() -> None:
     print_header("Minecraft Modpack Installer")
 
-    # Locate .minecraft and mods directories
-    mc_folder = find_minecraft_folder()
-    mods_folder = mc_folder / "mods"
-    backup_folder = mc_folder / "backups"
-
-    mods_folder.mkdir(parents=True, exist_ok=True)
-
-    # Check for Backup
-    backup_created_path: Optional[Path] = None
-    existing_mods = get_installed_mods(mods_folder)
-    if existing_mods:
-        print_header("Backup Existing Mods")
-        if ask_yes_no("Would you like to backup your existing mods?", default=True):
-            try:
-                backup_name = input("Enter backup name [Default: Modpack_Backup]: ").strip()
-            except (KeyboardInterrupt, EOFError):
-                print("\nOperation cancelled.")
-                sys.exit(1)
-            if not backup_name:
-                backup_name = "Modpack_Backup"
-            backup_created_path = create_backup(mods_folder, backup_folder, backup_name)
+    # Prompt user for destination directory
+    mods_folder = get_target_folder()
 
     # Track statistics
     installed_count = 0
@@ -487,13 +429,10 @@ def main() -> None:
 
     # Summary
     print_header("Installation Summary")
+    print(f"  Target Folder:  {mods_folder}")
     print(f"  Installed Mods: {installed_count}")
     print(f"  Skipped Mods:   {skipped_count}")
     print(f"  Disabled Mods:  {disabled_count}")
-    if backup_created_path:
-        print(f"  Backup File:    {backup_created_path}")
-    else:
-        print(f"  Backup File:    None")
     print()
     print("==================================================")
     print("  Installation Complete!")
