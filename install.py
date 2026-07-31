@@ -419,7 +419,7 @@ def main() -> None:
     if optional_mods:
         print_header("Optional Mods")
         for mod in optional_mods:
-            print(f"--- {mod.name} ---")
+            print(f"\n--- {mod.name} ---")
             if mod.description:
                 print(f"    {mod.description}")
             question = mod.question or f"Install {mod.name}?"
