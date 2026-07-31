@@ -238,6 +238,17 @@ def print_info(msg: str) -> None:
     """Print an informational message."""
     print(f"  [•] {msg}")
 
+def ensure_tty_stdin() -> None:
+    """Redirect sys.stdin to the controlling terminal if input is piped (e.g., via curl ... | bash)."""
+    if not sys.stdin.isatty():
+        try:
+            if platform.system() == "Windows":
+                sys.stdin = open("CON", "r")
+            else:
+                sys.stdin = open("/dev/tty", "r")
+        except Exception:
+            pass
+
 def ask_yes_no(question: str, default: bool = True) -> bool:
     """Prompt the user with a Yes/No question."""
     suffix = "[Y/n]" if default else "[y/N]"
@@ -381,6 +392,7 @@ def disable_unknown_mods(mods_folder: Path, known_filenames: Set[str]) -> int:
 # ==============================================================================
 
 def main() -> None:
+    ensure_tty_stdin()
     print_header("Minecraft Modpack Installer")
 
     # Prompt user for destination directory

@@ -52,7 +52,13 @@ fi
 echo "✓ Download complete."
 echo
 
-python3 "$TMP_DIR/install.py"
+if [ -t 0 ]; then
+    python3 "$TMP_DIR/install.py"
+elif [ -e /dev/tty ]; then
+    python3 "$TMP_DIR/install.py" < /dev/tty
+else
+    python3 "$TMP_DIR/install.py"
+fi
 
 echo
 echo "Installer finished."
