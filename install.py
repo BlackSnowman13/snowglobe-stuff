@@ -419,11 +419,11 @@ def main() -> None:
     if optional_mods:
         print_header("Optional Mods")
         for mod in optional_mods:
-            print(f"\n--- {mod.name} ---")
+            print(f"--- {mod.name} ---")
             if mod.description:
                 print(f"    {mod.description}")
             question = mod.question or f"Install {mod.name}?"
-            if ask_yes_no(question, default=False):
+            if ask_yes_no(question, default=True):
                 status = install_mod(mod, mods_folder)
                 if status == "installed":
                     installed_count += 1
@@ -432,6 +432,7 @@ def main() -> None:
             else:
                 print_info(f"Skipped optional mod '{mod.name}'.")
                 skipped_count += 1
+            print()
 
     # Disable Unknown Mods
     print_header("Disabling Unknown Mods")
@@ -446,10 +447,6 @@ def main() -> None:
     print(f"  Installed Mods: {installed_count}")
     print(f"  Skipped Mods:   {skipped_count}")
     print(f"  Disabled Mods:  {disabled_count}")
-    print()
-    print("==================================================")
-    print("  Installation Complete!")
-    print("==================================================")
     print()
 
 if __name__ == "__main__":
