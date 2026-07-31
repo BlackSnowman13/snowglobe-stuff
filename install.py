@@ -239,13 +239,14 @@ def print_info(msg: str) -> None:
     print(f"  [•] {msg}")
 
 def ensure_tty_stdin() -> None:
-    """Redirect sys.stdin to the controlling terminal if input is piped (e.g., via curl ... | bash)."""
+    """Redirect file descriptor 0 (stdin) to the controlling terminal if input is piped (e.g., via curl ... | bash)."""
     if not sys.stdin.isatty():
         try:
-            if platform.system() == "Windows":
-                sys.stdin = open("CON", "r")
-            else:
-                sys.stdin = open("/dev/tty", "r")
+            tty_path = "CON" if platform.system() == "Windows" else "/dev/tty"
+            tty_fd = os.open(tty_path, os.O_RDONLY)
+            os.dup2(tty_fd, 0)
+            os.close(tty_fd)
+            sys.stdin = open(0, "r", encoding=sys.stdin.encoding or "utf-8", errors="replace")
         except Exception:
             pass
 
