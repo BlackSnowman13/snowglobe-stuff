@@ -1,0 +1,343 @@
+#!/usr/bin/env python3
+"""
+install.py - Minecraft Modpack Installer
+
+Architecture:
+  - Imports
+  - Mod Dataclass & Configuration
+  - Helper Functions
+  - Main Execution Flow
+"""
+
+import os
+import sys
+import platform
+import urllib.request
+import urllib.error
+import zipfile
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Optional, Set
+
+# ==============================================================================
+# 1. CONFIGURATION & DATA STRUCTURE
+# ==============================================================================
+
+@dataclass
+class Mod:
+    name: str
+    filename: str
+    url: str
+    required: bool = True
+    question: Optional[str] = None
+    description: Optional[str] = None
+
+# THIS IS THE ONLY THING YOU EDIT TO CHANGE THE MODPACK LIST
+MODS: List[Mod] = [
+    # Required Mods
+    Mod(
+        name="Fabric API",
+        filename="fabric-api-0.92.0+1.20.1.jar",
+        url="https://cdn.modrinth.com/data/P7GJAUrM/versions/k9S2G1S9/fabric-api-0.92.0%2B1.20.1.jar",
+        required=True,
+    ),
+    # Optional Mods
+    Mod(
+        name="Ok Zoomer",
+        filename="ok_zoomer-5.0.0-beta.10+1.20.1.jar",
+        url="https://cdn.modrinth.com/data/mOgUt4GM/versions/5.0.0-beta.10+1.20.1/ok_zoomer-5.0.0-beta.10%2B1.20.1.jar",
+        required=False,
+        question="Install a zoom mod?",
+        description="Adds an adjustable zoom.",
+    ),
+]
+
+
+# ==============================================================================
+# 2. HELPER FUNCTIONS
+# ==============================================================================
+
+def print_header(title: str) -> None:
+    """Print a clean visual section header."""
+    print()
+    print("==================================================")
+    print(f"  {title}")
+    print("==================================================")
+    print()
+
+def print_success(msg: str) -> None:
+    """Print a success message with a checkmark indicator."""
+    print(f"  [✓] {msg}")
+
+def print_error(msg: str) -> None:
+    """Print an error message."""
+    print(f"  [✗] {msg}")
+
+def print_info(msg: str) -> None:
+    """Print an informational message."""
+    print(f"  [•] {msg}")
+
+def ask_yes_no(question: str, default: bool = True) -> bool:
+    """Prompt the user with a Yes/No question."""
+    suffix = "[Y/n]" if default else "[y/N]"
+    while True:
+        try:
+            choice = input(f"{question} {suffix} ").strip().lower()
+            if not choice:
+                return default
+            if choice in ("y", "yes"):
+                return True
+            if choice in ("n", "no"):
+                return False
+            print("Please enter 'y' or 'n'.")
+        except (KeyboardInterrupt, EOFError):
+            print("\nOperation cancelled.")
+            sys.exit(1)
+
+def find_minecraft_folder() -> Path:
+    """
+    Locate the .minecraft folder using the following priority:
+    1. Local directory beside install.py (./.minecraft)
+    2. Default OS directory (%APPDATA%/.minecraft, ~/.minecraft, ~/Library/Application Support/minecraft)
+    3. User interactive prompt fallback
+    """
+    script_dir = Path(__file__).resolve().parent
+    local_mc = script_dir / ".minecraft"
+    if local_mc.is_dir():
+        print_success(f"Found local .minecraft at: {local_mc}")
+        return local_mc
+
+    system = platform.system()
+    default_path: Optional[Path] = None
+
+    if system == "Windows":
+        appdata = os.getenv("APPDATA")
+        if appdata:
+            default_path = Path(appdata) / ".minecraft"
+    elif system == "Linux":
+        default_path = Path.home() / ".minecraft"
+    elif system == "Darwin":
+        default_path = Path.home() / "Library" / "Application Support" / "minecraft"
+
+    if default_path and default_path.is_dir():
+        print_success(f"Found .minecraft at default path: {default_path}")
+        return default_path
+
+    # Fallback to interactive prompt
+    print_error("Could not automatically locate the .minecraft directory.")
+    while True:
+        try:
+            path_str = input("Please enter the path to your .minecraft folder: ").strip()
+            if path_str:
+                custom_path = Path(path_str).expanduser().resolve()
+                if custom_path.is_dir():
+                    return custom_path
+                print_error(f"The path '{custom_path}' does not exist or is not a directory.")
+        except (KeyboardInterrupt, EOFError):
+            print("\nOperation cancelled.")
+            sys.exit(1)
+
+def download_file(url: str, destination_path: Path) -> bool:
+    """Download a file with basic progress display."""
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Minecraft-Modpack-Installer/1.0"}
+        )
+        with urllib.request.urlopen(req) as response, open(destination_path, "wb") as out_file:
+            total_size = response.getheader("Content-Length")
+            total_bytes = int(total_size) if total_size and total_size.isdigit() else None
+            downloaded = 0
+            block_size = 8192
+
+            while True:
+                buffer = response.read(block_size)
+                if not buffer:
+                    break
+                downloaded += len(buffer)
+                out_file.write(buffer)
+
+                if total_bytes:
+                    percent = (downloaded / total_bytes) * 100
+                    sys.stdout.write(f"\r  [↓] Downloading {destination_path.name}... {percent:.1f}%")
+                else:
+                    sys.stdout.write(f"\r  [↓] Downloading {destination_path.name}... {downloaded} bytes")
+                sys.stdout.flush()
+
+        print()  # Newline after download complete
+        return True
+    except Exception as err:
+        print()
+        print_error(f"Failed to download {url}: {err}")
+        if destination_path.exists():
+            destination_path.unlink()
+        return False
+
+def verify_download(filepath: Path) -> bool:
+    """Verify that the downloaded file exists and is not empty."""
+    if filepath.exists() and filepath.stat().st_size > 0:
+        return True
+    return False
+
+def create_backup(mods_folder: Path, backup_folder: Path, backup_name: str) -> Optional[Path]:
+    """Create a zip backup of all files in the mods folder."""
+    backup_folder.mkdir(parents=True, exist_ok=True)
+    clean_name = backup_name.strip()
+    if not clean_name.endswith(".zip"):
+        clean_name += ".zip"
+
+    backup_path = backup_folder / clean_name
+    print_info(f"Creating backup at: {backup_path.name}")
+
+    try:
+        with zipfile.ZipFile(backup_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for item in mods_folder.rglob("*"):
+                if item.is_file():
+                    arcname = item.relative_to(mods_folder)
+                    zip_file.write(item, arcname)
+        print_success(f"Backup created successfully: {backup_path}")
+        return backup_path
+    except Exception as err:
+        print_error(f"Failed to create backup: {err}")
+        return None
+
+def get_installed_mods(mods_folder: Path) -> Set[str]:
+    """Get filenames of all currently installed mods in the mods folder."""
+    if not mods_folder.exists():
+        return set()
+    return {f.name for f in mods_folder.iterdir() if f.is_file()}
+
+def install_mod(mod: Mod, mods_folder: Path) -> str:
+    """
+    Install a mod if it does not already exist.
+    Returns: 'installed', 'skipped', or 'failed'
+    """
+    target_path = mods_folder / mod.filename
+
+    if target_path.exists() and verify_download(target_path):
+        print_info(f"Skipping '{mod.name}' ({mod.filename} already present).")
+        return "skipped"
+
+    print_info(f"Installing '{mod.name}'...")
+    if download_file(mod.url, target_path) and verify_download(target_path):
+        print_success(f"Successfully installed '{mod.name}'.")
+        return "installed"
+    else:
+        print_error(f"Failed to install '{mod.name}'.")
+        return "failed"
+
+def disable_unknown_mods(mods_folder: Path, known_filenames: Set[str]) -> int:
+    """
+    Rename unknown .jar files to .jar.disabled.
+    Ignores directories, existing .disabled files, and known filenames.
+    """
+    if not mods_folder.exists():
+        return 0
+
+    disabled_count = 0
+    for item in mods_folder.iterdir():
+        if item.is_dir():
+            continue
+        if item.name.endswith(".disabled") or item.name.endswith(".tmp"):
+            continue
+
+        if item.name not in known_filenames:
+            disabled_name = f"{item.name}.disabled"
+            disabled_path = mods_folder / disabled_name
+            try:
+                item.rename(disabled_path)
+                print_info(f"Disabled unknown mod: '{item.name}' -> '{disabled_name}'")
+                disabled_count += 1
+            except Exception as err:
+                print_error(f"Failed to disable '{item.name}': {err}")
+
+    return disabled_count
+
+
+# ==============================================================================
+# 3. MAIN INSTALLER
+# ==============================================================================
+
+def main() -> None:
+    print_header("Minecraft Modpack Installer")
+
+    # Locate .minecraft and mods directories
+    mc_folder = find_minecraft_folder()
+    mods_folder = mc_folder / "mods"
+    backup_folder = mc_folder / "backups"
+
+    mods_folder.mkdir(parents=True, exist_ok=True)
+
+    # Check for Backup
+    backup_created_path: Optional[Path] = None
+    existing_mods = get_installed_mods(mods_folder)
+    if existing_mods:
+        print_header("Backup Existing Mods")
+        if ask_yes_no("Would you like to backup your existing mods?", default=True):
+            try:
+                backup_name = input("Enter backup name [Default: Modpack_Backup]: ").strip()
+            except (KeyboardInterrupt, EOFError):
+                print("\nOperation cancelled.")
+                sys.exit(1)
+            if not backup_name:
+                backup_name = "Modpack_Backup"
+            backup_created_path = create_backup(mods_folder, backup_folder, backup_name)
+
+    # Track statistics
+    installed_count = 0
+    skipped_count = 0
+    disabled_count = 0
+
+    # Install Required Mods
+    print_header("Installing Required Mods")
+    required_mods = [m for m in MODS if m.required]
+    for mod in required_mods:
+        status = install_mod(mod, mods_folder)
+        if status == "installed":
+            installed_count += 1
+        elif status == "skipped":
+            skipped_count += 1
+
+    # Install Optional Mods
+    optional_mods = [m for m in MODS if not m.required]
+    if optional_mods:
+        print_header("Optional Mods")
+        for mod in optional_mods:
+            print(f"--- {mod.name} ---")
+            if mod.description:
+                print(f"    {mod.description}")
+            question = mod.question or f"Install {mod.name}?"
+            if ask_yes_no(question, default=False):
+                status = install_mod(mod, mods_folder)
+                if status == "installed":
+                    installed_count += 1
+                elif status == "skipped":
+                    skipped_count += 1
+            else:
+                print_info(f"Skipped optional mod '{mod.name}'.")
+                skipped_count += 1
+
+    # Disable Unknown Mods
+    print_header("Disabling Unknown Mods")
+    known_filenames = {mod.filename for mod in MODS}
+    disabled_count = disable_unknown_mods(mods_folder, known_filenames)
+    if disabled_count == 0:
+        print_info("No unknown mods to disable.")
+
+    # Summary
+    print_header("Installation Summary")
+    print(f"  Installed Mods: {installed_count}")
+    print(f"  Skipped Mods:   {skipped_count}")
+    print(f"  Disabled Mods:  {disabled_count}")
+    if backup_created_path:
+        print(f"  Backup File:    {backup_created_path}")
+    else:
+        print(f"  Backup File:    None")
+    print()
+    print("==================================================")
+    print("  Installation Complete!")
+    print("==================================================")
+    print()
+
+if __name__ == "__main__":
+    main()
