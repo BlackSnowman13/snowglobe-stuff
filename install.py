@@ -201,7 +201,7 @@ MODS: List[Mod] = [
         url="https://cdn.modrinth.com/data/BD7N7OcY/versions/W26rnjoZ/LocatorBar-neoforge-1.2.1%2B1.21.1.jar",
         required=False,
         question="Install Locator Bar?",
-        description="Adds a bar to the HUD that shows the direction and distance to the nearest waypoint.",
+        description="Adds a bar to the HUD that shows the direction and distance to the nearest waypoint/players.",
     ),
     Mod(
         name="Ok Zoomer",
@@ -430,7 +430,7 @@ def main() -> None:
     # Install Optional Mods
     optional_mods = [m for m in MODS if not m.required]
     if optional_mods:
-        print_header("Optional Mods")
+        print_header("Optional Mods (Clientside Quality of Life Mods)")
         for mod in optional_mods:
             target_path = mods_folder / mod.filename
             if target_path.exists() and verify_download(target_path):
