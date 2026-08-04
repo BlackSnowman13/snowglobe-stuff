@@ -432,6 +432,12 @@ def main() -> None:
     if optional_mods:
         print_header("Optional Mods")
         for mod in optional_mods:
+            target_path = mods_folder / mod.filename
+            if target_path.exists() and verify_download(target_path):
+                print_info(f"Skipping '{mod.name}' ({mod.filename} already present).")
+                skipped_count += 1
+                continue
+
             print(f"--- {mod.name} ---")
             if mod.description:
                 print(f"    {mod.description}")
