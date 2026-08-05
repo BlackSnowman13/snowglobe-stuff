@@ -161,36 +161,36 @@ MODS: List[Mod] = [
         url="https://cdn.modrinth.com/data/dzb1a5WV/versions/PsnDvjPV/CreateDragonsPlus-1.11.4.jar",
         required=True,
     ),
-    Mod(
-        name="Rechiseled: Create",
-        filename="rechiseledcreate-1.1.1-neoforge-mc1.21.jar",
-        url="https://cdn.modrinth.com/data/E6867niZ/versions/VnOezhJR/rechiseledcreate-1.1.1-neoforge-mc1.21.jar",
-        required=True,
-    ),
-    Mod(
-        name="Rechiseled",
-        filename="rechiseled-1.2.5-neoforge-mc1.21.jar",
-        url="https://cdn.modrinth.com/data/B0g2vT6l/versions/S5FnErRw/rechiseled-1.2.5-neoforge-mc1.21.jar",
-        required=True,
-    ),
-    Mod(
-        name="SuperMartijn642's Core Lib",
-        filename="supermartijn642corelib-1.1.22-neoforge-mc1.21.jar",
-        url="https://cdn.modrinth.com/data/rOUBggPv/versions/Bw2Pdrfn/supermartijn642corelib-1.1.22-neoforge-mc1.21.jar",
-        required=True,
-    ),
-    Mod(
-        name="SuperMartijn642's Config Lib",
-        filename="supermartijn642configlib-1.1.8-neoforge-mc1.21.jar",
-        url="https://cdn.modrinth.com/data/LN9BxssP/versions/qKL9jM75/supermartijn642configlib-1.1.8-neoforge-mc1.21.jar",
-        required=True,
-    ),
-    Mod(
-        name="Fusion (Connected Textures)",
-        filename="fusion-1.3.12-neoforge-mc1.21.1.jar",
-        url="https://cdn.modrinth.com/data/p19vrgc2/versions/6Oxgpgr9/fusion-1.3.12-neoforge-mc1.21.1.jar",
-        required=True,
-    ),
+    # Mod(
+    #     name="Rechiseled: Create",
+    #     filename="rechiseledcreate-1.1.1-neoforge-mc1.21.jar",
+    #     url="https://cdn.modrinth.com/data/E6867niZ/versions/VnOezhJR/rechiseledcreate-1.1.1-neoforge-mc1.21.jar",
+    #     required=True,
+    # ),
+    # Mod(
+    #     name="Rechiseled",
+    #     filename="rechiseled-1.2.5-neoforge-mc1.21.jar",
+    #     url="https://cdn.modrinth.com/data/B0g2vT6l/versions/S5FnErRw/rechiseled-1.2.5-neoforge-mc1.21.jar",
+    #     required=True,
+    # ),
+    # Mod(
+    #     name="SuperMartijn642's Core Lib",
+    #     filename="supermartijn642corelib-1.1.22-neoforge-mc1.21.jar",
+    #     url="https://cdn.modrinth.com/data/rOUBggPv/versions/Bw2Pdrfn/supermartijn642corelib-1.1.22-neoforge-mc1.21.jar",
+    #     required=True,
+    # ),
+    # Mod(
+    #     name="SuperMartijn642's Config Lib",
+    #     filename="supermartijn642configlib-1.1.8-neoforge-mc1.21.jar",
+    #     url="https://cdn.modrinth.com/data/LN9BxssP/versions/qKL9jM75/supermartijn642configlib-1.1.8-neoforge-mc1.21.jar",
+    #     required=True,
+    # ),
+    # Mod(
+    #     name="Fusion (Connected Textures)",
+    #     filename="fusion-1.3.12-neoforge-mc1.21.1.jar",
+    #     url="https://cdn.modrinth.com/data/p19vrgc2/versions/6Oxgpgr9/fusion-1.3.12-neoforge-mc1.21.1.jar",
+    #     required=True,
+    # ),
 
     # Optional Mods
     Mod(
